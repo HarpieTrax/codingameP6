@@ -1,7 +1,30 @@
 import sys
 import math
 
+#===================================================
+#FONCTIONS UTILISES PENDANT LE JEU
+#===================================================
+
+# Fct utilent par la suite pour code plus optimale
+def Abilities_detection(x):      #fct qui permet de savoir si y a des cartes des abilities d'un jeu de crate passé en paramètre et les renvoi pour les ciblers (sauf charge qui sert plus à rien)
+    tab=[]
+    for elt in x :
+        print(f"### OUI ### {dico[elt]['abilitie']}", file=sys.stderr, flush=True) 
+        if "G" in dico[elt]["abilitie"]:      #détection en priorité de Guard 
+            tab.append(elt)
+    for elt2 in x :  
+        if "B" in dico[elt2]["abilitie"]:     #détection ensuite de Breakthrough
+            tab.append(elt2) 
+    #print(f"### TESTTTTTTT ### {tab}", file=sys.stderr, flush=True)
+    return tab
+
+#===================================================
+#VARIALBES À DÉCLARER EN DEHORS DU WHILE
+#===================================================
+
 Tour = 0
+tab_types=[0,0,0,0]
+pourcentage=0
 
 
 # Game loop
@@ -17,21 +40,22 @@ while True:
     card_count = int(input())
 
     # Listes des coûts, attaques et défenses des monstres à sélectionner
-    costs = []
-    attacks = []
-    defenses = []
-    locations = []
-    abilities=[]
-    tab_my_health_change=[]
-    tab_opponent_health_change=[]
-    tab_card_draw=[]
+    costs = [] #coûts en mana des monstres
+    attacks = [] #attaques des monstres
+    defenses = [] #PV / def des monstres
+    locations = [] #Monstres en main ou sur le board (allié ou adverse)
+    abilities=[] #capacités des monstres / objets
+    tab_my_health_change=[] #modifications de nos PVs
+    tab_opponent_health_change=[] #modifications des PVs de l'adversaire
+    tab_card_draw=[] #nombre de cartes tirés
+    cards_type = [] #type de la carte 0 : créature | 1 obj vert | 2 obj rouge | 3 obj bleu 
 
     dico = {}
 
-    # Mon jeu 
+    # Mon jeu  (ma main)
     MyHand = []
 
-    # Mes cartes jouées
+    # Mes cartes sur le Board
     MyGame = []
 
     # Liste des cartes que l'adversaire a en jeu
@@ -41,21 +65,22 @@ while True:
     MyHand = [elt for elt in MyHand if elt not in MyGame]
 
     # Récupérer les infos des cartes
-    for i in range(card_count):
-        inputs = input().split()
-        card_number = int(inputs[0])
-        instance_id = int(inputs[1])
-        location = int(inputs[2])
-        card_type = int(inputs[3])
-        cost = int(inputs[4])
-        attack = int(inputs[5])
-        defense = int(inputs[6])
-        abilitie = inputs[7]
-        my_health_change = int(inputs[8])
-        opponent_health_change = int(inputs[9])
-        card_draw = int(inputs[10])
+    #TOUTE LA BOUCLE FOR PEUT ÊTRE MISE DANS UNE FONCTION
+    for i in range(card_count): 
+        inputs = input().split() 
+        card_number = int(inputs[0]) #identifiant unique
+        instance_id = int(inputs[1]) #identifiant d'instance
+        location = int(inputs[2]) #localisation : 0 = main, 1 = board allié, -1 = board ennemi
+        card_type = int(inputs[3]) #type de carte, bleu, vert, rouge, neutre
+        cost = int(inputs[4]) #coût en mana de la carte
+        attack = int(inputs[5]) #attaque de la carte
+        defense = int(inputs[6]) #défense de la carte
+        abilitie = inputs[7] #capacité de la carte
+        my_health_change = int(inputs[8]) #modification nos pvs par la carte
+        opponent_health_change = int(inputs[9]) #modif pv adverse par la carte
+        card_draw = int(inputs[10]) #modif tirage carte par la carte
         
-        #des tab pour recup les infos des 3 cartes et faire le meilleur choix
+        #des tab pour recup les infos des 3 cartes et faire le meilleur choix pour draft
         locations.append(location)
         costs.append(cost)
         attacks.append(attack)
@@ -64,6 +89,7 @@ while True:
         tab_my_health_change.append(my_health_change)
         tab_opponent_health_change.append(opponent_health_change)
         tab_card_draw.append(card_draw)
+        cards_type.append(card_type)
 
         #recup les info sous forme de dico pour phase de combat 
         if Tour >= 30:
@@ -79,187 +105,147 @@ while True:
                 "opponent_health_change": opponent_health_change,
                 "card_draw": card_draw
             }
-            #print("### nb" + str(instance_id) + str(dico[instance_id]['defense']), file=sys.stderr, flush=True)
-
+            #print("### nb" + str(instance_id) + " ; " + str(dico[instance_id]['defense']), file=sys.stderr, flush=True)
+            #Création des listes des cartes de ma main et du Board
             if location == 0 and instance_id not in MyHand:
                 MyHand.append(instance_id)
             elif location == 1 and instance_id not in MyGame:
                 MyGame.append(instance_id)
             elif location == -1 and instance_id not in OpponentGame:
                 OpponentGame.append(instance_id)
+    
+    print(f"dico : {dico}", file = sys.stderr, flush = True)
 
-    # Affichage Information de base  
-    Tour += 1
+
+#===================================================
+#AFFICHAGE INFO DE BASE
+#===================================================
+
+    Tour += 1 #CHANGER LA PLACE DU TOUR+=1 (CALCUL SUR LES TOURS AVANT ET APRÈS PAS LOGIQUE)
     print(f"#### Tour n°{Tour} ####", file=sys.stderr, flush=True)
     print(f"Ma mana : {player_mana} | Ma vie : {player_health}\n", file=sys.stderr, flush=True)
     print(f"My Hand : {MyHand}", file=sys.stderr, flush=True)
     print(f"My Game : {MyGame}", file=sys.stderr, flush=True)
     print(f"Opponent Game : {OpponentGame}\n", file=sys.stderr, flush=True)
 
-    # Fct utilent par la suite pour code plus optimale
-    def Abilities_detection(x):      #fct qui permet de savoir si y a des cartes des abilities d'un jeu de crate passé en paramètre et les renvoi pour les ciblers (sauf charge qui sert plus à rien)
-        tab=[]
-        for elt in x :
-            print(f"### OUI ### {dico[elt]['abilitie']}", file=sys.stderr, flush=True) 
-            if "G" in dico[elt]["abilitie"]:      #détection en priorité de Guard 
-                tab.append(elt)
-        for elt2 in x :  
-            if "B" in dico[elt2]["abilitie"]:     #détection ensuite de Breakthrough
-                tab.append(elt2) 
-        print(f"### TESTTTTTTT ### {tab}", file=sys.stderr, flush=True)
-        return tab
 
-    # Phase de draft
+#===================================================
+#DRAFT PHASE
+#===================================================
+
     if Tour < 31:
         print(f"Prix Mana : {costs}", file=sys.stderr, flush=True)
         print(f"val_attaques : {attacks}", file=sys.stderr, flush=True)
         print(f"Les abilitie : {abilities}", file=sys.stderr, flush=True)
-        print(f"Les dégats en plus affligé à l'adversaire : {tab_opponent_health_change}", file=sys.stderr, flush=True)
+        #print(f"Les dégats en plus affligé à l'adversaire : {tab_opponent_health_change}", file=sys.stderr, flush=True)
 
+        # choisir 80% créature et 30% objet (à opti pour trouver un bonne équilibre)
+        # ce choix par rapport au pourcentage vient après avoir regarder si pas des cartes broken 
+
+        # Variables utiles 
         best_index = None  # Stocke l'index de la meilleure carte choisie
 
-        # 1. Privilégie G + my_health_change
-        for i in range(3):
-            if "G" in abilities[i] and tab_my_health_change[i] > 0:
-                best_index = i
+        # REGARDE SI Y A DES CARTES TRES FORTES
+        criteres = [
+            # Priorité haute
+            # 1. Privilégie G + my_health_change
+            lambda i: "G" in abilities[i] and tab_my_health_change[i] > 0,
+
+            # 2. Privilégie G + opponent_health_change
+            lambda i: "G" in abilities[i] and tab_opponent_health_change[i] < 0,
+
+            # 7. My_health_change >= 4
+            lambda i: tab_my_health_change[i] >= 4,
+
+            # 8. Opponent_health_change <= -2
+            lambda i: tab_opponent_health_change[i] <= -2,
+
+            # 9. My_health_change >= 2 and opponent_health_change <= -1
+            lambda i: tab_my_health_change[i] >= 2 and tab_opponent_health_change[i] <= -1,
+
+            # 10. Privilégie B + my_health_change
+            lambda i: "B" in abilities[i] and tab_my_health_change[i] > 0,
+
+            # 11. Privilégie B + opponent_health_change
+            lambda i: "B" in abilities[i] and tab_opponent_health_change[i] < 0,
+
+            lambda i: "B" in abilities[i] and tab_opponent_health_change[i] < 0,
+
+            
+            # type 1 (obj verte) avec attaque et defense >= +2 
+            #lambda i:  1 in cards_type[i] and attacks[i] >= 2 and defenses[i] >= 2,
+
+            # type 2 (obj rouge) avec attaque et defense <= +2
+
+            # type 3 (obj verte) avec attaque et defense >= +2 
+
+            #lambda i:  1 in cards_type[i] and attacks[i] >= 2 and defenses[i] >= 2,
+
+
+            # Autres critères si pas au dessus de 80%
+            # 3. Privilégie G + card_draw
+            lambda i: "G" in abilities[i] and tab_card_draw[i] > 0,
+
+            # 4. Privilégie G + B
+            lambda i: "G" in abilities[i] and "B" in abilities[i],
+
+            # 5. Privilégie G + C
+            lambda i: "G" in abilities[i] and "C" in abilities[i],
+
+            # 6. Privilégie G seul
+            lambda i: "G" in abilities[i],
+
+            # 12. Privilégie B + card_draw
+            lambda i: "B" in abilities[i] and tab_card_draw[i] > 0,
+
+            # 13. Privilégie B + C
+            lambda i: "B" in abilities[i] and "C" in abilities[i],
+
+            # 14. Privilégie B seul
+            lambda i: "B" in abilities[i],
+
+            # 15. My_health_change >= 2
+            lambda i: tab_my_health_change[i] >= 2,
+
+            # 16. My_health_change >= 1 and opponent_health_change <= -1
+            lambda i: tab_my_health_change[i] >= 1 and tab_opponent_health_change[i] <= -1,
+
+            # 17. Privilégie C + my_health_change
+            lambda i: "C" in abilities[i] and tab_my_health_change[i] > 0,
+
+            # 18. Privilégie C + opponent_health_change
+            lambda i: "C" in abilities[i] and tab_opponent_health_change[i] < 0,
+
+            # 19. Privilégie C + card_draw
+            lambda i: "C" in abilities[i] and tab_card_draw[i] > 0,
+
+            # 20. Privilégie C seul
+            lambda i: "C" in abilities[i],
+
+            # 21. Privilégie l'attaque la plus élevée
+            lambda i: attacks[i] == max(attacks),
+        ]
+
+        # Parcours les critères et sélectionne le premier qui correspond
+        for critere in criteres:
+            for i in range(3):
+                if critere(i):
+                    best_index = i
+                    break
+            if best_index is not None:
                 break
 
-        # 2. Privilégie G + opponent_health_change
-        if best_index is None:
-            for i in range(3):
-                if "G" in abilities[i] and tab_opponent_health_change[i] < 0:
-                    best_index = i
-                    break
+        #mise à jour pourcentage des types de cartes
+        if best_index is not None:
+            for i in range(4):
+                if cards_type[best_index] == i:
+                    tab_types[i] += 1
+            print(f"Après mise à jour: {tab_types}", file=sys.stderr, flush=True)
+            pourcentage = tab_types[0] / sum(tab_types)  # Éviter la division par zéro
+        else:
+            pourcentage = tab_types[0] / sum(tab_types) if sum(tab_types) > 0 else 0 
 
-        # 3. Privilégie G + card_draw
-        if best_index is None:
-            for i in range(3):
-                if "G" in abilities[i] and tab_card_draw[i] > 0:
-                    best_index = i
-                    break
-
-        # 4. Privilégie G + B
-        if best_index is None:
-            for i in range(3):
-                if "G" in abilities[i] and "B" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 5. Privilégie G + C
-        if best_index is None:
-            for i in range(3):
-                if "G" in abilities[i] and "C" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 6. Privilégie G seul
-        if best_index is None:
-            for i in range(3):
-                if "G" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 7. My_health_change >= 4
-        if best_index is None:
-            for i in range(3):
-                if tab_my_health_change[i] >= 4:
-                    best_index = i
-                    break
-
-        # 8. Opponent_health_change <= -2
-        if best_index is None:
-            for i in range(3):
-                if tab_opponent_health_change[i] <= -2:
-                    best_index = i
-                    break
-
-        # 9. My_health_change >= 2 and opponent_health_change <= -1
-        if best_index is None:
-            for i in range(3):
-                if tab_my_health_change[i] >= 2 and tab_opponent_health_change[i] <= -1:
-                    best_index = i
-                    break
-
-        # 10. Privilégie B + my_health_change
-        if best_index is None:
-            for i in range(3):
-                if "B" in abilities[i] and tab_my_health_change[i] > 0:
-                    best_index = i
-                    break
-
-        # 11. Privilégie B + opponent_health_change
-        if best_index is None:
-            for i in range(3):
-                if "B" in abilities[i] and tab_opponent_health_change[i] < 0:
-                    best_index = i
-                    break
-
-        # 12. Privilégie B + card_draw
-        if best_index is None:
-            for i in range(3):
-                if "B" in abilities[i] and tab_card_draw[i] > 0:
-                    best_index = i
-                    break
-
-        # 13. Privilégie B + C
-        if best_index is None:
-            for i in range(3):
-                if "B" in abilities[i] and "C" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 14. Privilégie B seul
-        if best_index is None:
-            for i in range(3):
-                if "B" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 15. My_health_change >= 2
-        if best_index is None:
-            for i in range(3):
-                if tab_my_health_change[i] >= 2:
-                    best_index = i
-                    break
-
-        # 16. My_health_change >= 1 and opponent_health_change <= -1
-        if best_index is None:
-            for i in range(3):
-                if tab_my_health_change[i] >= 1 and tab_opponent_health_change[i] <= -1:
-                    best_index = i
-                    break
-
-        # 17. Privilégie C + my_health_change
-        if best_index is None:
-            for i in range(3):
-                if "C" in abilities[i] and tab_my_health_change[i] > 0:
-                    best_index = i
-                    break
-
-        # 18. Privilégie C + opponent_health_change
-        if best_index is None:
-            for i in range(3):
-                if "C" in abilities[i] and tab_opponent_health_change[i] < 0:
-                    best_index = i
-                    break
-
-        # 19. Privilégie C + card_draw
-        if best_index is None:
-            for i in range(3):
-                if "C" in abilities[i] and tab_card_draw[i] > 0:
-                    best_index = i
-                    break
-
-        # 20. Privilégie C seul
-        if best_index is None:
-            for i in range(3):
-                if "C" in abilities[i]:
-                    best_index = i
-                    break
-
-        # 21. Privilégie l'attaque la plus élevé
-        if best_index is None:
-            best_index = attacks.index(max(attacks))
+        print(f"### TESTTTTTTT pourcentage : ### {pourcentage}", file=sys.stderr, flush=True)
 
         # Affichage et choix de la carte
         print(f"Carte choisie : {best_index}", file=sys.stderr, flush=True)
@@ -268,7 +254,10 @@ while True:
     
 
 
-    # Phase de bataille
+#===================================================
+#BATTLE PHASE
+#===================================================
+
     else:
         #ensemble des variables utiles 
         actions = []
@@ -282,192 +271,240 @@ while True:
 
 
 
-        # LE CHOIX DE LA CARTE A ENVOYER (SUMMON)
+        ### LE CHOIX DE LA CARTE A ENVOYER (SUMMON) ###
+
         if len(MyGame)<6:   #vérifie qu'on a pas déjà 6 cartes sur le plateau pour pas envoyer d'autres cartes car impossible
-        # Sélectionne les cartes jouables en fonction du mana
+
             for elt in MyHand:
-                if player_mana >= dico[elt]["cost"]:  # Sélectionne seulement les cartes jouables
+                if player_mana >= dico[elt]["cost"] and not dico[elt]["card_type"]>0:  # Sélectionne seulement les cartes jouables
                     possibilities.append(elt)
+        
+        # Sélectionne les cartes jouables en fonction du mana
+            for i in range(len(MyHand)):
+                break_all = False
 
-            # 1. Privilégie Guard + my_health_change >= 4
-            for elt in possibilities:
-                if "G" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 4:  # Guard + soin >= 4
-                    MyGame.append(elt)
-                    actions.append(f"SUMMON {elt}")
-                    break_all = True
-                    break
 
-            # 2.  privilégie Guard + opponent_health_change <= -2
-            if not break_all:
+                #A OPTI
+                # 1. Privilégie Guard + my_health_change >= 4
                 for elt in possibilities:
-                    if "G" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Guard + dégâts adversaire >= 2
+                    if "G" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 4:  # Guard + soin >= 4
                         MyGame.append(elt)
+                        possibilities.remove(elt)
                         actions.append(f"SUMMON {elt}")
                         break_all = True
+                        player_mana -= dico[elt]["cost"]
                         break
 
-            # 3.  privilégie Guard + card_draw >= 2
-            if not break_all:
-                for elt in possibilities:
-                    if "G" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 2:  # Guard + pioche >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 2.  privilégie Guard + opponent_health_change <= -2
+                if not break_all:
+                    for elt in possibilities:
+                        if "G" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Guard + dégâts adversaire >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 4.  privilégie Guard + Breakthrough
-            if not break_all:
-                for elt in possibilities:
-                    if "G" in dico[elt]["abilitie"] and "B" in dico[elt]["abilitie"]:  # Guard + Breakthrough
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 3.  privilégie Guard + card_draw >= 2
+                if not break_all:
+                    for elt in possibilities:
+                        if "G" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 2:  # Guard + pioche >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 5.  privilégie Guard + Charge
-            if not break_all:
-                for elt in possibilities:
-                    if "G" in dico[elt]["abilitie"] and "-C-" in dico[elt]["abilitie"]:  # Guard + Charge
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 4.  privilégie Guard + Breakthrough
+                if not break_all:
+                    for elt in possibilities:
+                        if "G" in dico[elt]["abilitie"] and "B" in dico[elt]["abilitie"]:  # Guard + Breakthrough
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 6.  privilégie Guard
-            if not break_all:
-                for elt in possibilities:
-                    if "G" in dico[elt]["abilitie"]:  # Guard seul
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 5.  privilégie Guard + Charge
+                if not break_all:
+                    for elt in possibilities:
+                        if "G" in dico[elt]["abilitie"] and "-C-" in dico[elt]["abilitie"]:  # Guard + Charge
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 7.  privilégie my_health_change >= 4
-            if not break_all:
-                for elt in possibilities:
-                    if dico[elt]["my_health_change"] >= 4:  # Soin >= 4
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 6.  privilégie Guard
+                if not break_all:
+                    for elt in possibilities:
+                        if "G" in dico[elt]["abilitie"]:  # Guard seul
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 8.  privilégie opponent_health_change <= -2
-            if not break_all:
-                for elt in possibilities:
-                    if dico[elt]["opponent_health_change"] <= -2:  # Dégâts adversaire >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 7.  privilégie my_health_change >= 4
+                if not break_all:
+                    for elt in possibilities:
+                        if dico[elt]["my_health_change"] >= 4:  # Soin >= 4
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 9.  privilégie my_health_change >= 2 et opponent_health_change <= -1
-            if not break_all:
-                for elt in possibilities:
-                    if dico[elt]["my_health_change"] >= 2 and dico[elt]["opponent_health_change"] <= -1:  # Soin >= 2 et dégâts adversaire >= 1
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 8.  privilégie opponent_health_change <= -2
+                if not break_all:
+                    for elt in possibilities:
+                        if dico[elt]["opponent_health_change"] <= -2:  # Dégâts adversaire >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 10.  privilégie Breakthrough + my_health_change >= 2
-            if not break_all:
-                for elt in possibilities:
-                    if "B" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 2:  # Breakthrough + soin >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 9.  privilégie my_health_change >= 2 et opponent_health_change <= -1
+                if not break_all:
+                    for elt in possibilities:
+                        if dico[elt]["my_health_change"] >= 2 and dico[elt]["opponent_health_change"] <= -1:  # Soin >= 2 et dégâts adversaire >= 1
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 11.  privilégie Breakthrough + opponent_health_change <= -2
-            if not break_all:
-                for elt in possibilities:
-                    if "B" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Breakthrough + dégâts adversaire >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 10.  privilégie Breakthrough + my_health_change >= 2
+                if not break_all:
+                    for elt in possibilities:
+                        if "B" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 2:  # Breakthrough + soin >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 12.  privilégie Breakthrough + card_draw >= 1
-            if not break_all:
-                for elt in possibilities:
-                    if "B" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 1:  # Breakthrough + pioche >= 1
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 11.  privilégie Breakthrough + opponent_health_change <= -2
+                if not break_all:
+                    for elt in possibilities:
+                        if "B" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Breakthrough + dégâts adversaire >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 13.  privilégie Breakthrough + Charge
-            if not break_all:
-                for elt in possibilities:
-                    if "B" in dico[elt]["abilitie"] and "-C-" in dico[elt]["abilitie"]:  # Breakthrough + Charge
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 12.  privilégie Breakthrough + card_draw >= 1
+                if not break_all:
+                    for elt in possibilities:
+                        if "B" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 1:  # Breakthrough + pioche >= 1
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 14.  privilégie Breakthrough seul
-            if not break_all:
-                for elt in possibilities:
-                    if "B" in dico[elt]["abilitie"]:  # Breakthrough seul
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 13.  privilégie Breakthrough + Charge
+                if not break_all:
+                    for elt in possibilities:
+                        if "B" in dico[elt]["abilitie"] and "-C-" in dico[elt]["abilitie"]:  # Breakthrough + Charge
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 15.  privilégie Charge + my_health_change >= 2
-            if not break_all:
-                for elt in possibilities:
-                    if "-C-" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 2:  # Charge + soin >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 14.  privilégie Breakthrough seul
+                if not break_all:
+                    for elt in possibilities:
+                        if "B" in dico[elt]["abilitie"]:  # Breakthrough seul
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 16.  privilégie Charge + opponent_health_change <= -2
-            if not break_all:
-                for elt in possibilities:
-                    if "-C-" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Charge + dégâts adversaire >= 2
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 15.  privilégie Charge + my_health_change >= 2
+                if not break_all:
+                    for elt in possibilities:
+                        if "-C-" in dico[elt]["abilitie"] and dico[elt]["my_health_change"] >= 2:  # Charge + soin >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 17.  privilégie my_health_change >= 1 et opponent_health_change <= -1
-            if not break_all:
-                for elt in possibilities:
-                    if dico[elt]["my_health_change"] >= 1 and dico[elt]["opponent_health_change"] <= -1:  # Soin >= 2 et dégâts adversaire >= 1
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 16.  privilégie Charge + opponent_health_change <= -2
+                if not break_all:
+                    for elt in possibilities:
+                        if "-C-" in dico[elt]["abilitie"] and dico[elt]["opponent_health_change"] <= -2:  # Charge + dégâts adversaire >= 2
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 18.  privilégie Charge + card_draw >= 1
-            if not break_all:
-                for elt in possibilities:
-                    if "-C-" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 1:  # Charge + pioche >= 1
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 17.  privilégie my_health_change >= 1 et opponent_health_change <= -1
+                if not break_all:
+                    for elt in possibilities:
+                        if dico[elt]["my_health_change"] >= 1 and dico[elt]["opponent_health_change"] <= -1:  # Soin >= 2 et dégâts adversaire >= 1
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 19.  privilégie Charge seul
-            if not break_all:
-                for elt in possibilities:
-                    if "-C-" in dico[elt]["abilitie"]:  # Charge seul
-                        MyGame.append(elt)
-                        actions.append(f"SUMMON {elt}")
-                        break_all = True
-                        break
+                # 18.  privilégie Charge + card_draw >= 1
+                if not break_all:
+                    for elt in possibilities:
+                        if "-C-" in dico[elt]["abilitie"] and dico[elt]["card_draw"] >= 1:  # Charge + pioche >= 1
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
 
-            # 20.  privilégie la carte avec la plus grosse attaque
-            if not break_all and possibilities:
-                ind = max(range(len(possibilities)), key=lambda i: dico[possibilities[i]]["attack"])
-                MyGame.append(possibilities[ind])
-                actions.append(f"SUMMON {possibilities[ind]}")
+                # 19.  privilégie Charge seul
+                if not break_all:
+                    for elt in possibilities:
+                        if "-C-" in dico[elt]["abilitie"]:  # Charge seul
+                            MyGame.append(elt)
+                            possibilities.remove(elt)
+                            actions.append(f"SUMMON {elt}")
+                            break_all = True
+                            player_mana -= dico[elt]["cost"]
+                            break
+
+                # 20.  privilégie la carte avec la plus grosse attaque
+                if not break_all and possibilities:
+                    ind = max(range(len(possibilities)), key=lambda i: dico[possibilities[i]]["attack"])
+                    MyGame.append(possibilities[ind])
+                    actions.append(f"SUMMON {possibilities[ind]}")
+                    player_mana -= dico[possibilities[ind]]["cost"]
+                    possibilities.remove(possibilities[ind])
 
 
 
-        #LES ATTACKS
+
+        ### LES ATTACKS ###
 
         # Initialisation de break_all_attack à False avant de commencer les attaques
         for elt in MyGame[:-1]:  # Le :-1 car la dernière carte est appelée par SUMMON et ne peut pas attaquer sauf si capa G
