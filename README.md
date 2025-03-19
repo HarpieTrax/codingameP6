@@ -18,6 +18,10 @@
   ####battle phase
   ajouter une partie USE avant l'attacks pour utiliser items
 
+## Both idée
+il faudrait ajouter un systèmed de poids aux cartes, def + att + capa (par ex: guard = 3 ptn...)
+
+il faudrait faire en sorte que qd il n'y a pas de créature avec guard en face, on focus en priorité le joueur ennemi (attack -1)
   
   
   
