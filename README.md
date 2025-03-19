@@ -23,5 +23,9 @@ il faudrait ajouter un systèmed de poids aux cartes, def + att + capa (par ex: 
 
 il faudrait faire en sorte que qd il n'y a pas de créature avec guard en face, on focus en priorité le joueur ennemi (attack -1)
   
+
+==> le -1 en fin de code :summon pour le cas de la charge
+    focus le jouer 
+    si 2 guard prendre le meilleur 
   
   
